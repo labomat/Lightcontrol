@@ -10,20 +10,17 @@
 
 int timer = 1000;           // The higher the number, the slower the timing.
 
-int navLights[6] = {0,0,0,0,0,0};
-int posLights[2] = {0,0};
-int topLights[2] = {0,0};
-int backLights[2] = {0,0};
-int searchLight = 0;
+int navLights[6] = {0,0,0,0,0,0};   // Array of 6 navigation (colreg) light on observation bridge port side
+int posLights[2] = {0,0};           // position lights on both sides of the main bridge (na)
+int topLights[2] = {0,0};           // 2 front facing toplights on observation bridge
+int backLights[2] = {0,0};          // 2 front facing toplights on observation bridge (na)
+
+int searchLight = 0;                // front facing search light on observation bridge
 int radar = 0;
 
-const int offLights[6] = {0,0,0,0,0,0};
-const int onLights[6] = {1,1,1,1,1,1};
-const int diveLights[6] = {1,0,1,0,1,0};
-
-const int smallOffLights[2] = {0,0};
-const int smallOnLights[2] = {1,1};
-
+const int offLights[6] = {0,0,0,0,0,0};   // all lights off
+const int onLights[6] = {1,1,1,1,1,1};    // all lights on
+const int diveLights[6] = {1,0,1,0,1,0};  // pattern for signal "diver in water": red-white-red
 
 
 void setup() {
@@ -48,9 +45,9 @@ switch (navstate)
     Serial.println("Cruise");
     Serial.println(" ");
       memcpy (navLights, offLights, sizeof navLights);
-      memcpy (posLights, smallOnLights, sizeof posLights);
-      memcpy (topLights, smallOnLights, sizeof topLights);
-      memcpy (backLights, smallOnLights, sizeof backLights);
+      memcpy (posLights, onLights, sizeof posLights);
+      memcpy (topLights, onLights, sizeof topLights);
+      memcpy (backLights, onLights, sizeof backLights);
       searchLight = 0;
     break;
 
@@ -59,9 +56,9 @@ switch (navstate)
     Serial.println("Anchor");
     Serial.println(" ");
       memcpy (navLights, offLights, sizeof navLights);
-      memcpy (posLights, smallOffLights, sizeof posLights);
-      memcpy (topLights, smallOnLights, sizeof topLights);
-      memcpy (backLights, smallOffLights, sizeof backLights);
+      memcpy (posLights, offLights, sizeof posLights);
+      memcpy (topLights, offLights, sizeof topLights);
+      memcpy (backLights, offLights, sizeof backLights);
       searchLight = 0;
     break;
 
@@ -70,10 +67,10 @@ switch (navstate)
     Serial.println("Diving");
     Serial.println(" ");
       memcpy (navLights, diveLights, sizeof navLights);
-      memcpy (posLights, smallOnLights, sizeof posLights);
-      memcpy (topLights, smallOnLights, sizeof topLights);
-      memcpy (backLights, smallOnLights, sizeof backLights);
-      searchLight = 1;
+      memcpy (posLights, onLights, sizeof posLights);
+      //memcpy (topLights, onLights, sizeof topLights);
+      memcpy (backLights, onLights, sizeof backLights);
+      searchLight = 0;
     break;
 
     // test (all lights on)
@@ -81,9 +78,9 @@ switch (navstate)
     Serial.println("Testing");
     Serial.println(" ");
       memcpy (navLights, onLights, sizeof navLights);
-      memcpy (posLights, smallOnLights, sizeof posLights);
-      memcpy (topLights, smallOnLights, sizeof topLights);
-      memcpy (backLights, smallOnLights, sizeof backLights);
+      memcpy (posLights, onLights, sizeof posLights);
+      memcpy (topLights, onLights, sizeof topLights);
+      memcpy (backLights, onLights, sizeof backLights);
       searchLight = 1;
     break;
 
@@ -92,9 +89,9 @@ switch (navstate)
     Serial.println("Off");
     Serial.println(" ");
       memcpy (navLights, offLights, sizeof navLights);
-      memcpy (posLights, smallOffLights, sizeof posLights);
-      memcpy (topLights, smallOffLights, sizeof topLights);
-      memcpy (backLights, smallOffLights, sizeof backLights);
+      memcpy (posLights, offLights, sizeof posLights);
+      memcpy (topLights, offLights, sizeof topLights);
+      memcpy (backLights, offLights, sizeof backLights);
       searchLight = 0;
     break;   
 
