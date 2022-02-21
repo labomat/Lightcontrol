@@ -8,6 +8,31 @@
   CC-BY SA 2020 Kai Laborenz
 *********************************************************************/
 
+// FrSky S.Port Sensor Library
+#include "FrSkySportSensor.h"
+#include "FrSkySportSensorAss.h"
+#include "FrSkySportSingleWireSerial.h"
+#include "FrSkySportTelemetryReader.h"
+#include "SoftwareSerial.h"
+
+bool module1onOff[16];
+bool module2onOff[16];
+
+unsigned long prevI2CpollingTime = 0;
+
+// Sensor definition to initialize telemetry
+FrSkySportSensorAss ass(FrSkySportSensor::ID14); //create a sensor
+FrSkySportTelemetryReader telemetry; //create a telemetry object
+
+
+uint8_t uiValue[4] = { 0, 0, 0, 0 };
+bool bValuesUpdated = false;
+int iValToggleSwitch = 0;
+
+
+
+
+
 int timer = 1000;           // The higher the number, the slower the timing.
 
 int navLights[6] = {0,0,0,0,0,0};   // Array of 6 navigation (colreg) light on observation bridge port side
@@ -23,36 +48,89 @@ const int onLights[6] = {1,1,1,1,1,1};    // all lights on
 const int diveLights[6] = {1,0,1,0,1,0};  // pattern for signal "diver in water": red-white-red
 
 
+void printBinary(byte b) {
+  for (int i = 7; i >= 0; i-- )
+  {
+    Serial.print((b >> i) & 0X01);//shift and select first bit
+  }
+  Serial.println();
+}
+
+
+
 void setup() {
+
+  // configure telemetry serial port
+  telemetry.begin(FrSkySportSingleWireSerial::SOFT_SERIAL_PIN_12, &ass);
+  
+  prevI2CpollingTime = millis();
+  
   Serial.begin(9600);
+  
   // use a for loop to initialize each pin as an output:
   for (int thisPin = 2; thisPin < 12; thisPin++) {
     pinMode(thisPin, OUTPUT);
   }
+
+  Serial.println("Start");
+
+  
 }
 
 
 
 void loop() {
 
- if (Serial.available() > 0) {
-    int navstate = Serial.read();  
+ //receive telemetry data
+  telemetry.receive();  
 
-switch (navstate)
-  {
+
+  if (telemetry.available && ((uiValue[0] != telemetry.aUiRxValue[0])
+                           || (uiValue[1] != telemetry.aUiRxValue[1])
+                           || (uiValue[2] != telemetry.aUiRxValue[2])
+                           || (uiValue[3] != telemetry.aUiRxValue[3]))) {
+    uiValue[0] = telemetry.aUiRxValue[0];
+    uiValue[1] = telemetry.aUiRxValue[1];
+    uiValue[2] = telemetry.aUiRxValue[2];
+    uiValue[3] = telemetry.aUiRxValue[3];
+
+    telemetry.available = false;
+    bValuesUpdated = true;
+  }
+
+  // update display and output
+    if (bValuesUpdated) {    
+    bValuesUpdated = false;
+
+      //Serial.print(uiValue[0]);
+      printBinary(uiValue[0]);
+      Serial.print(" ");
+      printBinary(uiValue[1]);
+      //Serial.print(uiValue[1]);
+      Serial.print(" ");
+      printBinary(uiValue[2]);
+      //Serial.print(uiValue[2]);
+      Serial.print(" ");
+      printBinary(uiValue[3]);
+      //Serial.println(uiValue[3]);
+      
     // cruise  
-    case 'c':
+if (bitRead(uiValue[0],0)) { 
     Serial.println("Cruise");
     Serial.println(" ");
       memcpy (navLights, offLights, sizeof navLights);
       memcpy (posLights, onLights, sizeof posLights);
       memcpy (topLights, onLights, sizeof topLights);
       memcpy (backLights, onLights, sizeof backLights);
-      searchLight = 0;
-    break;
+      searchLight = 0; }
+      else {
+      memcpy (posLights, offLights, sizeof posLights);
+      memcpy (topLights, offLights, sizeof topLights);
+      memcpy (backLights, offLights, sizeof backLights);
+      }
 
     // anchor  
-    case 'a':
+if (bitRead(uiValue[0],1)) { 
     Serial.println("Anchor");
     Serial.println(" ");
       memcpy (navLights, offLights, sizeof navLights);
@@ -60,70 +138,60 @@ switch (navstate)
       memcpy (topLights, offLights, sizeof topLights);
       memcpy (backLights, offLights, sizeof backLights);
       searchLight = 0;
-    break;
+}
 
     // diver operations  
-    case 'd':
+if (bitRead(uiValue[0],2)) { 
     Serial.println("Diving");
     Serial.println(" ");
       memcpy (navLights, diveLights, sizeof navLights);
       memcpy (posLights, onLights, sizeof posLights);
       //memcpy (topLights, onLights, sizeof topLights);
       memcpy (backLights, onLights, sizeof backLights);
-      searchLight = 0;
-    break;
+      searchLight = 0; }
+    else {
+      memcpy (navLights, offLights, sizeof navLights);
+    }
 
     // test (all lights on)
-    case 't':
+if (bitRead(uiValue[0],3)) { 
     Serial.println("Testing");
     Serial.println(" ");
       memcpy (navLights, onLights, sizeof navLights);
       memcpy (posLights, onLights, sizeof posLights);
       memcpy (topLights, onLights, sizeof topLights);
       memcpy (backLights, onLights, sizeof backLights);
-      searchLight = 1;
-    break;
-
-     // off  
-    case 'o':
-    Serial.println("Off");
-    Serial.println(" ");
+      searchLight = 1; }
+    else {
       memcpy (navLights, offLights, sizeof navLights);
       memcpy (posLights, offLights, sizeof posLights);
       memcpy (topLights, offLights, sizeof topLights);
       memcpy (backLights, offLights, sizeof backLights);
-      searchLight = 0;
-    break;   
+      searchLight = 0; 
+    }
 
-    // deck light
-    case 'l':
+
+    // search light
+if (bitRead(uiValue[0],4)) { 
     Serial.println("Searchlight");
     Serial.println(" ");
-    if (searchLight == 0) {
-      searchLight = 1;
+    searchLight = 1;
     }
     else {
       searchLight = 0;
     }
-    break;
 
     // radar
-    case 'r':
+if (bitRead(uiValue[0],5)) { 
     Serial.println("Radar");
     Serial.println(" ");
-    if (radar == 0) {
       radar = 1;
-      analogWrite(11,64);
+      analogWrite(11,75);
     }
     else {
       radar = 0;
       analogWrite(11,0);
     }
-    break;
-
-
-    
- }
   
   Serial.println("Navlights");
   for (int thisPin = 2; thisPin < 8; thisPin++) {
